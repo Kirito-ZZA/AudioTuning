@@ -1,0 +1,88 @@
+*{
+    outline: 0px;
+}
+/* TTitleBtn */
+TTitleBtn, TitleBtn_Menu{
+    background-color: #197ccc;
+    border-radius: none;
+    padding-top: 15px;
+    padding-bottom: 5px;
+    background-origin: content;
+    background-position: top;
+    background-repeat: no-repeat;
+    width: 100px;
+    height: 68px;
+    text-align: bottom;
+    font-family: Microsoft YaHei;
+    font-size: 15px;
+    color: #e6ffff;
+}
+TTitleBtn:hover {
+    background-color: #3089d1;
+}
+TTitleBtn:pressed, TTitleBtn:checked {
+    background-color: #3089d1;
+    padding-bottom: 2px;
+    border-bottom: 3px solid #acd0ed;
+}
+
+/* TTabBtn */
+TTabBtn {
+    background-color: #e4e4e4;
+    border-radius: none;
+    font-family: Arial Unicode MS;
+    font-weight: bold;
+    font-size: 15px;
+    color: #666666;
+    max-height: 40px;
+    min-height: 40px;
+    min-width: 200px;
+    max-width: 200px;
+    padding-right: 10px;
+    text-align: center;
+}
+TTabBtn:hover {
+    background-color: #ffffff;
+}
+TTabBtn:pressed, TTabBtn:checked {
+    background-color: #ffffff;
+    color: #197ccc;
+    border-bottom: 3px solid #197ccc;
+}
+TTabBtn #CloseBtn {
+    max-height: 16px;
+    max-width: 16px;
+    background-color: transparent;
+    font-family: Arial Unicode MS;
+    font-size: 16px;
+    color: #666666;
+}
+TTabBtn #CloseBtn:hover {
+    font-weight: bold;
+}
+QMenu {
+    color:#386487;
+    background-color:#197ccc;
+    border:1px solid #C0DCF2;
+    margin:0px;
+}
+QMenu::item {
+    padding:3px 20px;
+    color:#386487;
+    background-color:#197ccc;
+}
+/* QMenu::indicator{
+    width:13px;
+    height:13px;
+}
+     */
+QMenu::item:selected {
+    color:#386487;
+    /* border:0px solid #C0DCF2; */
+    background:#F2F9FF;
+}
+    
+QMenu::separator {
+    height:1px;
+    background:#C0DCF2;
+}

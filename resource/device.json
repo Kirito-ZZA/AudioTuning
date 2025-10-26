@@ -1,0 +1,26 @@
+[
+    {
+        "item_code": "10000",
+        "item_name": "Fluke 8558/8588"
+    },
+    {
+        "item_code": "20000",
+        "item_name": "OThers"
+    },
+    {
+        "item_code": "11000",
+        "item_name": "GPIB"
+    },
+    {
+        "item_code": "12000",
+        "item_name": "TCP"
+    },
+    {
+        "item_code": "21000",
+        "item_name": "TCP"
+    },
+    {
+        "item_code": "22000",
+        "item_name": "RS232"
+    }
+]
