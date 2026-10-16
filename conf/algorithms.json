@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "algorithms": [
+    {
+      "module": "filters.gain_filter",
+      "class": "GainAlgorithm",
+      "order": 10,
+      "enabled": true,
+      "params": {
+        "gain_db": 0.0
+      }
+    },
+    {
+      "module": "filters.EQFilters",
+      "class": "EqualizerAlgorithm",
+      "order": 20,
+      "enabled": true,
+      "params": {
+        "bands": [
+          {"frequency": 25, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 40, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 63, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 100, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 160, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 250, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 400, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 630, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 1000, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 1600, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 2500, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 4000, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 6300, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 10000, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 16000, "gain_db": 0.0, "q": 1.4},
+          {"frequency": 20000, "gain_db": 0.0, "q": 1.4}
+        ]
+      }
+    },
+    {
+      "module": "filters.act",
+      "class": "ACTAlgorithm",
+      "order": 30,
+      "enabled": false,
+      "params": {
+        "threshold_db": -18.0,
+        "ratio": 4.0,
+        "knee_db": 6.0,
+        "attack_ms": 10.0,
+        "release_ms": 100.0,
+        "makeup_db": 0.0,
+        "ceiling_db": -1.0
+      }
+    }
+  ]
+}

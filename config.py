@@ -4,8 +4,7 @@ from PyQt5.QtCore import QSettings
 
 basepath = os.path.dirname(__file__)
 app_event = None
-device = None
-psd_tool = None
+
 
 class Config(object):
     '''Config配置模块，读写.ini配置文件'''

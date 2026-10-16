@@ -4,7 +4,7 @@
 import serial
 import logging
 import socket
-import visa
+import pyvisa as visa
 
 
 class LinkTCP(object):

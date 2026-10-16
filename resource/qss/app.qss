@@ -1,5 +1,6 @@
 *{
     outline: 0px;
+    font-family: Microsoft YaHei;
 }
 QDockWidget {
     border: none;
@@ -8,7 +9,7 @@ QDockWidget::title {
     min-height: 36px;
     max-height: 36px;
     background-color: #e4e4e4;
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 15px;
     font-weight: bold;
     text-align: left;
@@ -447,12 +448,12 @@ TTabBtn #CloseBtn:hover {
 }
 /* TLabel */
 TLabel {
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 16px;
     font-weight: bold;
 }
 NoiseMsgWidget #Label, SpectrumMsgWidget #Label {
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 15px;
     color: #717171;
 }
@@ -500,42 +501,30 @@ DeviceConnWidget::title, SamplingDockWidget::title, SamplingMsgDockWidget::title
     border: 1px solid #d0d0d0;
 }
 /* DeviceWidget */
-DeviceWidget >QLabel {
-    font-family: Microsoft YaHei UI;
-    font-size: 12px;
-    color: #141414;
-}
-DeviceWidget >QComboBox {
-    background-color: #fff;
-}
-DeviceWidget >QComboBox:disabled, DeviceWidget >QLineEdit:disabled, DeviceWidget >QSpinBox:disabled {
-    background-color: #dcdcdc;
-    color: #717171;
-}
-DeviceWidget >QPushButton {
+DeviceWidget QPushButton {
     height: 30px;
     width: 80px;
     border-radius: 3px;
     background-color: #197ccc;
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 15px;
     color: #fff;
     text-align: center;
 }
-DeviceWidget >QPushButton:hover {
+DeviceWidget QPushButton:hover {
     border: 1px solid #355670;
 }
-DeviceWidget >QPushButton:pressed {
+DeviceWidget QPushButton:pressed {
     background-color: #e2ebf4;
 }
-DeviceWidget >QPushButton:disabled {
+DeviceWidget QPushButton:disabled {
     background-color: #e2ebf4;
     color: #656a6e;
 }
 
 /* SamplingWidget */
 SamplingWidget >QLabel {
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 12px;
     color: #141414;
 }
@@ -549,7 +538,7 @@ SamplingWidget >QComboBox:disabled, SamplingWidget >QLineEdit:disabled, Sampling
 
 /* SamplingMsgWidget */
 SamplingMsgWidget >QLabel {
-    font-family: Microsoft YaHei UI;
+    font-family: Microsoft YaHei;
     font-size: 12px;
     color: #141414;
 }
