@@ -12,6 +12,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDesktopWidget, QDockWidget, QFrame, QMainWindow
 
 import config as settings
+import theme
 from appEvent import AppEvent
 from center import Center
 from config import Config
@@ -121,11 +122,16 @@ if __name__ == "__main__":
         debug=config.read_key("logger", "debug_mode", False, bool),
         _level=config.read_key("logger", "log_level", "INFO", str),
     )
+    theme_name = config.read_key("ui", "theme", "dark", str)
+    try:
+        theme.set_theme(theme_name)
+    except ValueError as exc:
+        logger.warning("%s，回退到默认主题 dark", exc)
+        theme.set_theme("dark")
     app.processEvents()
     settings.app_event = AppEvent(config, logger)
     viewer = AudioTuningApp(config=config, logger=logger)
-    with open(os.path.join(base_path, "resource/qss/app.qss"), "r", encoding="utf-8") as handle:
-        viewer.setStyleSheet(handle.read())
+    viewer.setStyleSheet(theme.render_qss())
     welcome.finish(viewer)
     viewer.show()
     sys.exit(app.exec_())

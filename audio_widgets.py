@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
 )
 
 import config as settings
+import theme
 from audio_analysis import (
     available_targets, calculate_spectrum, plot_samples, smoothed_response,
     target_response,
@@ -22,9 +23,23 @@ from audio_analysis import (
 from audio_engine import AudioError, PCMFormat, eq_bands_response, save_wav
 
 
+# 曲线颜色为业务约定，不随主题切换
 ORIGINAL_COLOR = "#00ae00"
 PROCESSED_COLOR = "#197ccc"
 TARGET_COLOR = "#eb6100"
+
+
+def _style_plot(plot):
+    """绘图区跟随全局主题；只改底色、坐标轴和文字，不动曲线颜色。"""
+    plot.setBackground(theme.color("plot_bg"))
+    for axis_name in ("left", "bottom"):
+        axis = plot.getAxis(axis_name)
+        axis.setPen(pg.mkPen(theme.color("plot_axis")))
+        axis.setTextPen(pg.mkPen(theme.color("plot_text")))
+
+
+def _plot_label_color():
+    return theme.color("plot_label")
 
 
 class PCMFormatDialog(QDialog):
@@ -127,12 +142,13 @@ class AudioProcessingPage(QFrame):
         self.file_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         root.addWidget(self.file_label)
         self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("color: #656a6e;")
+        self.status_label.setStyleSheet("color: %s;" % theme.color("text_dim"))
         root.addWidget(self.status_label)
 
         self.response_plot = pg.PlotWidget(title="当前 EQ 频率响应（ACT 为非线性动态处理）")
-        self.response_plot.setLabel("bottom", "频率", units="Hz")
-        self.response_plot.setLabel("left", "增益", units="dB")
+        _style_plot(self.response_plot)
+        self.response_plot.setLabel("bottom", "频率", units="Hz", color=_plot_label_color())
+        self.response_plot.setLabel("left", "增益", units="dB", color=_plot_label_color())
         self.response_plot.setLogMode(x=True, y=False)
         self.response_plot.showGrid(x=True, y=True, alpha=0.25)
         self.response_curve = self.response_plot.plot(pen=pg.mkPen(TARGET_COLOR, width=2))
@@ -550,8 +566,9 @@ class WaveformPage(QFrame):
         self.document = document
         root = QVBoxLayout(self)
         self.wave_plot = pg.PlotWidget(title="原始 / 处理后波形")
-        self.wave_plot.setLabel("bottom", "时间", units="s")
-        self.wave_plot.setLabel("left", "幅度", units="FS")
+        _style_plot(self.wave_plot)
+        self.wave_plot.setLabel("bottom", "时间", units="s", color=_plot_label_color())
+        self.wave_plot.setLabel("left", "幅度", units="FS", color=_plot_label_color())
         self.wave_plot.showGrid(x=True, y=True, alpha=0.25)
         self.wave_plot.addLegend()
         self.original_curve = self.wave_plot.plot(
@@ -581,8 +598,9 @@ class SpectrumComparisonPage(QFrame):
         self.document = document
         root = QVBoxLayout(self)
         self.spectrum_plot = pg.PlotWidget(title="处理前后频响（FFT，dBFS）")
-        self.spectrum_plot.setLabel("bottom", "频率", units="Hz")
-        self.spectrum_plot.setLabel("left", "幅度", units="dBFS")
+        _style_plot(self.spectrum_plot)
+        self.spectrum_plot.setLabel("bottom", "频率", units="Hz", color=_plot_label_color())
+        self.spectrum_plot.setLabel("left", "幅度", units="dBFS", color=_plot_label_color())
         self.spectrum_plot.setLogMode(x=True, y=False)
         self.spectrum_plot.showGrid(x=True, y=True, alpha=0.25)
         self.spectrum_plot.addLegend()
@@ -637,8 +655,9 @@ class HarmanComparisonPage(QFrame):
         root.addLayout(controls)
 
         self.target_plot = pg.PlotWidget(title="原始 / 处理后 / 哈曼目标")
-        self.target_plot.setLabel("bottom", "频率", units="Hz")
-        self.target_plot.setLabel("left", "相对幅度", units="dB")
+        _style_plot(self.target_plot)
+        self.target_plot.setLabel("bottom", "频率", units="Hz", color=_plot_label_color())
+        self.target_plot.setLabel("left", "相对幅度", units="dB", color=_plot_label_color())
         self.target_plot.setLogMode(x=True, y=False)
         self.target_plot.showGrid(x=True, y=True, alpha=0.25)
         self.target_plot.addLegend()

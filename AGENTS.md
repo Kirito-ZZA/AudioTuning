@@ -45,6 +45,7 @@ python -m venv .venv
 ## 4. 目录与模块职责
 
 - `app.py`：应用入口、主窗口、QSS、日志和关闭清理。
+- `theme.py`：全局主题色板（dark/light）、切换接口与 QSS 模板渲染，无 Qt 依赖。
 - `center.py`：四个中央页面的容器，持有共享 `AudioDocument` 并路由音频控制信号。
 - `audio_io.py`：无 Qt 依赖的音频读写和 PCM 转换。
 - `audio_engine.py`：文档状态、后台任务、算法链调度及兼容导出。
@@ -107,13 +108,15 @@ python -m venv .venv
 - 波形绘图可以抽稀，但实际音频处理不得抽稀。耗时解码和完整算法链不得阻塞 GUI 线程。
 - 原始波形和频谱使用 `#00ae00`，处理后使用 `#197ccc`；原始与处理后曲线使用一致窗口、频率范围、平滑和归一化规则，频率上限不超过 Nyquist。
 - FFT 频响和哈曼对比使用独立页签，必须有明确标题及图例；哈曼对比统一标注 1/6 倍频程和 1 kHz 归一化。
+- Header 导航按钮（`TTitleBtn`/`TTitleBtn_combo`）的图标和文字由 `paintEvent` 自绘定位，不使用 QSS `background-image`/`text-align`：图标通过 `setIconFile(path, top=8)` 挂载并顶部居中，文字底部居中、距底 5px（`_text_bottom_margin`）；调整间距只改这两个参数。QSS 仅负责按钮的背景、文字颜色和下划线等状态样式。
 
 ## 8. 配置、依赖与代码风格
 
 - 路径基于工程根目录或 `config.basepath` 构造，不写死本机绝对路径。
 - 应用配置使用 `conf/setup.ini`，算法配置使用独立 JSON；界面临时参数最终写入算法链，不另建不一致的状态副本。
 - 界面和错误信息使用中文，主流程使用 logger，不使用 `print` 代替日志。
-- `resource/qss/app.qss` 全局及局部字体统一为 `Microsoft YaHei`；音频控制窗口按钮沿用统一蓝色样式。
+- 界面主题统一由 `theme.py` 管理（无 Qt 依赖）：`dark`/`light` 两套色板，`set_theme()` 为唯一切换接口，`color("token")` 供代码取色，`render_qss()` 把 `resource/qss/app.qss` 模板中的占位符渲染成最终样式；QSS 模板内禁止写死颜色。启动时由 `conf/setup.ini` 的 `[ui] theme` 决定主题，默认 `dark`；界面上通过 Header 右侧"设置 → 主题切换"入口切换，选择后立即刷新 QSS 并写回配置，已创建的 pyqtgraph 图表重启后生效。
+- 全局及局部字体统一为 `Microsoft YaHei`；Header 保留品牌蓝，音频控制窗口按钮沿用统一蓝色样式；曲线颜色（原始 `#00ae00`、处理后 `#197ccc`、哈曼目标 `#eb6100`）是业务约定，不随主题切换。
 - `audio_io.py`、`audio_analysis.py` 和算法插件保持无 Qt 依赖；Qt 信号集中在文档和界面层。
 - 设备库只在使用设备功能时导入；缺少 VISA 后端或串口依赖时给出中文提示，不得导致音频应用启动失败。
 - 修改公共数据形状、信号、算法接口、配置键或依赖时，同步更新所有调用方和本文档。

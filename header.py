@@ -1,9 +1,15 @@
 """Application header and menu actions."""
 
+import os
+
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QSpacerItem
+from PyQt5.QtWidgets import (
+    QActionGroup, QFrame, QHBoxLayout, QLabel, QMessageBox, QSizePolicy,
+    QSpacerItem,
+)
 
 import config as settings
+import theme
 from CustomQWidget.TTitleBtn import TTitleBtn
 from CustomQWidget.TTitleBtn_combo import TTitleBtn_combo
 
@@ -44,6 +50,18 @@ class Header(QFrame):
             parent=self, logger=self.logger,
         )
         self.infoBtn = TTitleBtn("info", "infoBtn", checkable=False, parent=self)
+        self.shezhiBtn = TTitleBtn_combo(
+            "设置", "shezhiBtn", actionlist=[], parent=self, logger=self.logger,
+        )
+        self._build_theme_menu()
+        # 图标由按钮自绘（顶部居中），不再走 QSS background-image
+        _pic = os.path.join(settings.basepath, "resource", "pic")
+        for button, icon in (
+            (self.wenjianBtn, "wenjian.png"), (self.shebeiBtn, "shebei.png"),
+            (self.caiyangBtn, "caiyang.png"), (self.chuangkouBtn, "chuangkou.png"),
+            (self.infoBtn, "info.png"), (self.shezhiBtn, "shezhi.png"),
+        ):
+            button.setIconFile(os.path.join(_pic, icon))
         self.btns = [
             self.wenjianBtn, self.shebeiBtn, self.caiyangBtn,
             self.chuangkouBtn, self.infoBtn,
@@ -72,14 +90,52 @@ class Header(QFrame):
         spacer = QSpacerItem(40, 68, QSizePolicy.Expanding, QSizePolicy.Minimum)
         right_spacer = QSpacerItem(30, 68, QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout.addWidget(self.wenjianBtn)
-        layout.addWidget(self.shebeiBtn)
-        layout.addWidget(self.caiyangBtn)
-        layout.addWidget(splitter1)
-        layout.addWidget(self.chuangkouBtn)
-        layout.addWidget(self.infoBtn)
-        layout.addWidget(splitter2)
+        # --- 隐藏控件：已从布局移除（不占位），实例与信号连接保留 ---
+        # 以下 4 个按钮当前均为隐藏状态，是否彻底删除由用户决策；
+        # 如需恢复显示，取消注释对应 addWidget 并移除 __init__ 中的 hide()。
+        # layout.addWidget(self.shebeiBtn)      # 隐藏：音频
+        # layout.addWidget(self.caiyangBtn)     # 隐藏：采样
+        # layout.addWidget(splitter1)           # 隐藏按钮间的分隔线
+        # layout.addWidget(self.chuangkouBtn)   # 隐藏：窗口
+        # layout.addWidget(self.infoBtn)        # 隐藏：info
+        # layout.addWidget(splitter2)           # 隐藏按钮后的分隔线
         layout.addItem(spacer)
         layout.addItem(right_spacer)
+        layout.addWidget(self.shezhiBtn)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
+
+    def _build_theme_menu(self):
+        """设置按钮下拉菜单：主题切换（深色/浅色，单选）。"""
+        theme_menu = self.shezhiBtn.menu.addMenu("主题切换")
+        group = QActionGroup(self)
+        group.setExclusive(True)
+        self._theme_actions = {}
+        for key, label in (("dark", "深色"), ("light", "浅色")):
+            action = theme_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(theme.current_theme() == key)
+            group.addAction(action)
+            action.triggered.connect(
+                lambda _checked, k=key, text=label: self._on_theme_selected(k, text)
+            )
+            self._theme_actions[key] = action
+
+    def _on_theme_selected(self, name, label):
+        """切换主题：写入配置、立即刷新 QSS；图表颜色需重启生效。"""
+        self._theme_actions[name].setChecked(True)
+        if theme.current_theme() == name:
+            return
+        theme.set_theme(name)
+        if self.config is not None:
+            self.config.write_key("ui", "theme", name)
+        window = self.window()
+        if window is not None:
+            window.setStyleSheet(theme.render_qss())
+        if self.logger:
+            self.logger.info("界面主题切换为 %s", name)
+        QMessageBox.information(
+            self, "主题切换",
+            "界面主题已切换为「%s」，图表颜色将在重启应用后完全生效。" % label,
+        )

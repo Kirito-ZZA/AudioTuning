@@ -1,5 +1,8 @@
 from PyQt5.QtCore import Qt, QSize, pyqtSignal, QCoreApplication
-from PyQt5.QtWidgets import QPushButton, QMenu
+from PyQt5.QtGui import QPalette, QPixmap
+from PyQt5.QtWidgets import (
+    QPushButton, QMenu, QStyle, QStyleOptionButton, QStylePainter,
+)
 
 
 class TTitleBtn_combo(QPushButton):
@@ -42,6 +45,35 @@ class TTitleBtn_combo(QPushButton):
 
         self.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.released.connect(self.show_menu)
+        self._icon_pixmap = QPixmap()
+        self._icon_top = 8
+        self._text_bottom_margin = 5
+
+    def setIconFile(self, path, top=8):
+        '''设置按钮图标文件，绘制在按钮顶部居中位置。'''
+        self._icon_pixmap = QPixmap(path)
+        self._icon_top = top
+        self.update()
+
+    def paintEvent(self, event):
+        # 背景、hover、checked 等状态交给样式表风格绘制；
+        # 图标顶部居中、文字底部居中由代码绘制，位置与 Qt 版本无关。
+        painter = QStylePainter(self)
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
+        text = option.text
+        option.text = ""
+        painter.drawControl(QStyle.CE_PushButton, option)
+        if not self._icon_pixmap.isNull():
+            x = int((self.width() - self._icon_pixmap.width()) / 2)
+            painter.drawPixmap(x, self._icon_top, self._icon_pixmap)
+        if text:
+            painter.setPen(self.palette().color(QPalette.ButtonText))
+            painter.drawText(
+                self.rect().adjusted(0, 0, 0, -self._text_bottom_margin),
+                Qt.AlignHCenter | Qt.AlignBottom, text,
+            )
+        painter.end()
 
     def show_menu(self):
         _bl = self.mapToGlobal(self.rect().bottomLeft())
