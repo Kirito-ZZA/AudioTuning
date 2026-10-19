@@ -21,6 +21,7 @@ from audio_analysis import (
     target_response,
 )
 from audio_engine import AudioError, PCMFormat, eq_bands_response, save_wav
+from filters.EQFilters import fit_bands_to_curve
 
 
 # 曲线颜色为业务约定，不随主题切换
@@ -108,6 +109,30 @@ class PCMFormatDialog(QDialog):
         super().accept()
 
 
+class SelectAllDoubleSpinBox(QDoubleSpinBox):
+    """聚焦时全选文本的数值框。
+
+    点击后直接输入即整体替换，避免光标落在小数位导致数字被吞
+    （例如想输入 10 时 0 落到小数位，数值不变）；关闭键盘跟踪，
+    输入过程的中间值不触发参数应用，回车或失焦才提交。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setKeyboardTracking(False)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.selectAll()
+
+    def mousePressEvent(self, event):
+        # 鼠标点击会先移动光标，必须在点击处理之后再全选，
+        # 否则快速输入时选区被光标覆盖、数字仍可能落入小数位。
+        super().mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            self.selectAll()
+
+
 class AudioProcessingPage(QFrame):
     def __init__(self, document, parent=None):
         super().__init__(parent)
@@ -123,6 +148,8 @@ class AudioProcessingPage(QFrame):
         self._parameter_controls = []
         self._slot_groups = {}
         self._eq_table = None
+        # 由 Center 注入：返回 (目标曲线 key, 显示名)，用于“目标曲线拟合”。
+        self.fit_target_provider = None
         self._build_ui()
         self._rebuild_algorithm_controls()
         self.document.audio_changed.connect(self.refresh_audio)
@@ -264,7 +291,7 @@ class AudioProcessingPage(QFrame):
 
     @staticmethod
     def _make_spin(spec, value):
-        spin = QDoubleSpinBox()
+        spin = SelectAllDoubleSpinBox()
         spin.setRange(spec.minimum, spec.maximum)
         spin.setSingleStep(spec.step)
         decimals = 0 if spec.step >= 1 else min(3, int(np.ceil(-np.log10(spec.step))))
@@ -387,6 +414,58 @@ class AudioProcessingPage(QFrame):
         self._rebuild_algorithm_controls()
         self.status_label.setText("算法配置已重载" if not errors else errors[-1])
 
+    def _fit_target_requested(self):
+        if self.fit_target_provider is None:
+            self.status_label.setText("目标曲线来源不可用，无法进行目标曲线拟合")
+            return
+        target_key, target_label = self.fit_target_provider()
+        self.fit_to_target(target_key, target_label)
+
+    def fit_to_target(self, target_key, target_label):
+        """按当前音源平滑谱与所选目标曲线的差值自动拟合 16 段 EQ 增益。"""
+        if not self.document.loaded:
+            self.status_label.setText("请先打开音频文件，再进行目标曲线拟合")
+            return
+        try:
+            slot = self.document.chain.get_slot("eq")
+        except KeyError:
+            self.status_label.setText("算法链中未找到 EQ 均衡器，无法拟合")
+            return
+        grid, before = smoothed_response(self.document.original, self.document.sample_rate)
+        try:
+            target = target_response(target_key, grid)
+        except (OSError, ValueError) as exc:
+            self.status_label.setText("目标曲线读取失败：{}".format(exc))
+            return
+        desired = target - before
+        # 剔除信号能量过低的频段（如 MP3 高切以上），避免噪声差值被误拟合。
+        valid = before > -45.0
+        try:
+            bands, achieved = fit_bands_to_curve(
+                self.document.sample_rate, grid[valid], desired[valid],
+                slot.params["bands"],
+            )
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
+            return
+        self._flush_parameters()
+        try:
+            self.document.set_parameter("eq", "bands", bands)
+            if not slot.enabled:
+                self.document.set_enabled("eq", True)
+        except (AudioError, ValueError, KeyError) as exc:
+            self.status_label.setText(str(exc))
+            return
+        self._sync_algorithm_controls()
+        residual = desired[valid] - achieved
+        rms = float(np.sqrt(np.mean(np.square(residual)))) if residual.size else 0.0
+        fit_grid = grid[valid]
+        self.status_label.setText(
+            "已按「{}」完成 16 段增益拟合：{:.0f}–{:.0f} Hz 残差 RMS {:.1f} dB".format(
+                target_label, fit_grid[0], fit_grid[-1], rms
+            )
+        )
+
     def control(self, action):
         actions = {
             "play_original": lambda: self.play("original"),
@@ -395,6 +474,7 @@ class AudioProcessingPage(QFrame):
             "reset": self.reset_algorithms,
             "save_config": self.save_algorithms,
             "reload_config": self.reload_algorithms,
+            "fit_target": self._fit_target_requested,
         }
         if action in actions:
             actions[action]()
@@ -676,6 +756,10 @@ class HarmanComparisonPage(QFrame):
         root.addWidget(self.empty_label)
         self.target_combo.currentIndexChanged.connect(self.refresh)
         self.document.audio_changed.connect(self.refresh)
+
+    def current_target(self):
+        """返回当前选中的目标曲线 (key, 显示名)，供目标曲线拟合使用。"""
+        return self.target_combo.currentData(), self.target_combo.currentText()
 
     def refresh(self, *_args):
         if not self.document.loaded:

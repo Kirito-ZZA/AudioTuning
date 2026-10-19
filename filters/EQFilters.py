@@ -12,7 +12,7 @@ EQ_FREQUENCIES = (
 )
 EQ_BAND_COLUMNS = (
     ParameterSpec("frequency", "频率", 1000.0, 10.0, 24000.0, 1.0, "Hz"),
-    ParameterSpec("gain_db", "增益", 0.0, -12.0, 12.0, 0.1, "dB"),
+    ParameterSpec("gain_db", "增益", 0.0, -15.0, 15.0, 0.1, "dB"),
     ParameterSpec("q", "Q 值", 1.4, 0.1, 20.0, 0.1),
 )
 DEFAULT_EQ_BANDS = tuple((frequency, 0.0, 1.4) for frequency in EQ_FREQUENCIES)
@@ -97,6 +97,84 @@ def eq_bands_response(sample_rate, bands, points=2048):
 
 def eq_response(sample_rate, gains, points=2048, q=1.4):
     return _response_from_sos(sample_rate, build_eq_sos(sample_rate, gains, q), points)
+
+
+def fit_bands_to_curve(sample_rate, frequencies, desired_db, bands, iterations=8):
+    """按目标差值曲线最小二乘拟合各频段增益（每段频率与 Q 保持现状）。
+
+    单段 dB 频响与增益近似线性，因此以 +1 dB 单位增益响应为基函数做线性
+    最小二乘，再围绕当前解用真实滤波器频响迭代修正非线性误差，增益始终
+    限制在参数规范允许的范围内。
+
+    Args:
+        sample_rate: 采样率。
+        frequencies: 对数频率网格（Hz），应只包含有效频段
+            （信号缺失区域，如 MP3 高切以上，调用方需先剔除）。
+        desired_db: 期望的 EQ 频响（目标曲线 − 源平滑谱），与网格等长。
+        bands: 当前 bands 参数（读取每段频率与 Q）。
+        iterations: 非线性修正迭代次数。
+
+    Returns:
+        (bands, achieved_db)：拟合后的 bands 参数（dict 列表）与拟合得到
+        的实际 EQ 频响（在输入网格上）。
+    """
+    bands = EQ_BANDS_SPEC.coerce(bands)
+    frequencies = np.asarray(frequencies, dtype=np.float64)
+    desired_db = np.asarray(desired_db, dtype=np.float64)
+    nyquist = sample_rate / 2.0
+    valid = (
+        np.isfinite(desired_db) & np.isfinite(frequencies)
+        & (frequencies >= 20.0) & (frequencies <= nyquist * 0.98)
+    )
+    fit_frequencies = frequencies[valid]
+    fit_desired = desired_db[valid]
+    if len(fit_frequencies) < len(bands):
+        raise ValueError("可用于拟合的频点过少，请检查音源与采样率。")
+
+    gain_spec = EQ_BAND_COLUMNS[1]
+    basis_columns = []
+    for band in bands:
+        frequency = band["frequency"]
+        if frequency < nyquist * 0.98:
+            sos = peaking_sos(sample_rate, frequency, 1.0, band["q"])
+            _, response = sosfreqz(sos, worN=fit_frequencies, fs=sample_rate)
+            basis_columns.append(
+                20.0 * np.log10(np.maximum(np.abs(response), 1e-9))
+            )
+        else:
+            basis_columns.append(np.zeros_like(fit_frequencies))
+    basis = np.stack(basis_columns, axis=1)
+
+    def _achieved(gains):
+        sos = build_eq_sos_bands(sample_rate, [
+            (band["frequency"], gain, band["q"])
+            for band, gain in zip(bands, gains)
+        ])
+        if not len(sos):
+            return np.zeros_like(fit_frequencies)
+        _, response = sosfreqz(sos, worN=fit_frequencies, fs=sample_rate)
+        return 20.0 * np.log10(np.maximum(np.abs(response), 1e-9))
+
+    gains = np.zeros(len(bands))
+    for _ in range(max(1, int(iterations))):
+        delta, _residual, _rank, _sv = np.linalg.lstsq(
+            basis, fit_desired - _achieved(gains), rcond=None
+        )
+        if not np.all(np.isfinite(delta)):
+            break
+        gains = np.clip(gains + delta, gain_spec.minimum, gain_spec.maximum)
+        if np.max(np.abs(delta)) < 0.01:
+            break
+
+    fitted = [
+        {
+            "frequency": band["frequency"],
+            "gain_db": float(round(gain, 2)),
+            "q": band["q"],
+        }
+        for band, gain in zip(bands, gains)
+    ]
+    return fitted, _achieved(gains)
 
 
 class EqualizerAlgorithm(AudioAlgorithm):

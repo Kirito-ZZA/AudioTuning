@@ -38,3 +38,43 @@ def test_bands_validate_rows_and_skip_above_nyquist():
         eq_bands_response(48000, bands)
     with pytest.raises(ValueError, match="16 行"):
         eq_bands_response(48000, bands[:4])
+
+
+def _fit_test_case():
+    from filters.EQFilters import fit_bands_to_curve
+
+    sample_rate = 48000
+    grid = np.geomspace(20.0, 16000.0, 256)
+    # 合成目标差值：低频架 +6 dB、3 kHz 峰 +5 dB、9 kHz 谷 -6 dB。
+    desired = (
+        6.0 / (1.0 + (grid / 150.0) ** 2)
+        + 5.0 * np.exp(-0.5 * (np.log2(grid / 3000.0) / 0.35) ** 2)
+        - 6.0 * np.exp(-0.5 * (np.log2(grid / 9000.0) / 0.45) ** 2)
+    )
+    bands = _bands()
+    fitted, achieved = fit_bands_to_curve(sample_rate, grid, desired, bands)
+    return fitted, desired, achieved
+
+
+def test_fit_bands_to_curve_tracks_desired_response():
+    fitted, desired, achieved = _fit_test_case()
+    residual = achieved - desired
+    assert np.sqrt(np.mean(residual ** 2)) < 1.0
+    assert np.max(np.abs(residual)) < 2.5
+    assert all(
+        -15.0 <= band["gain_db"] <= 15.0 and band["frequency"] > 0
+        for band in fitted
+    )
+
+
+def test_fit_bands_to_curve_clips_gains_to_spec_range():
+    from filters.EQFilters import fit_bands_to_curve
+
+    grid = np.geomspace(20.0, 16000.0, 256)
+    fitted, achieved = fit_bands_to_curve(48000, grid, np.full_like(grid, 30.0), _bands())
+    gains = [band["gain_db"] for band in fitted]
+    # 超出能力的 30 dB 平坦目标下，增益必须全部限制在 ±15 dB 且确实触发上限。
+    assert all(-15.0 <= gain <= 15.0 for gain in gains)
+    assert max(gains) == 15.0
+    # 叠加效应允许略超目标，但不应失控发散。
+    assert achieved.max() < 35.0

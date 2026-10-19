@@ -38,6 +38,7 @@ class Center(QFrame):
         self.app_eventCenter.file_open.connect(self.open_audio)
         self.app_eventCenter.save_file.connect(self.save_audio)
         self.app_eventCenter.audio_control.connect(self.audioPage.control)
+        self.audioPage.fit_target_provider = self.harmanPage.current_target
 
     def _layout(self):
         layout = QVBoxLayout()

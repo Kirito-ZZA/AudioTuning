@@ -53,7 +53,7 @@ python -m venv .venv
 - `audio_widgets.py`：音效参数、独立波形、FFT 频响、哈曼对比页面及 PCM 格式对话框。
 - `filters/base.py`：算法基类与标量、列表、表格参数规范。
 - `filters/registry.py`：JSON 配置加载、动态 import、排序、启停、校验、执行和保存。
-- `filters/EQFilters.py`、`filters/gain_filter.py`、`filters/act.py`：内置算法插件。
+- `filters/EQFilters.py`、`filters/gain_filter.py`、`filters/act.py`：内置算法插件；`EQFilters.py` 另提供 `fit_bands_to_curve()`，按目标差值曲线最小二乘拟合各段增益（频率与 Q 不变，增益限幅在参数规范内）。
 - `conf/setup.ini`：应用配置；`conf/algorithms.json`：算法链配置。
 - `resource/targets/`：内置哈曼目标数据及许可证。
 - `header.py`、`tabBar.py`、`appEvent.py`：文件菜单、四页签和跨组件 Qt 信号。
@@ -101,7 +101,7 @@ python -m venv .venv
 
 - 仅保留“音效调试、波形、频响、哈曼对比”四个有效页签，不恢复无实现的噪声空白页。
 - 文件打开和原始/处理后保存只从 Header 文件菜单进入，不在音效调试页重复添加入口。
-- 播放、停止、参数重置及算法配置操作集中在音频控制窗口，通过 `AppEvent` 信号槽控制，不得跨页面直接持有对方实例。
+- 播放、停止、参数重置及算法配置操作集中在音频控制窗口，通过 `AppEvent` 信号槽控制，不得跨页面直接持有对方实例；“目标曲线拟合”按钮触发 `fit_target` 动作，由音效调试页按哈曼对比页当前选中的目标曲线自动拟合 EQ 16 段增益（只调增益，频率/Q 不变；平滑谱低于 -45 dB 的频段视为无信号、不参与拟合），目标来源通过 `AudioProcessingPage.fit_target_provider` 由 Center 注入。
 - 算法控件根据参数规范生成；EQ 使用 16 行 `QDoubleSpinBox` 表格，ACT 等标量参数使用紧凑双列网格；连续修改使用防抖，处理后播放/保存必须等待最新结果。
 - 原始与处理后播放、保存入口必须明确分离。切换音源或处理结果变化时，不得继续播放旧的处理后临时文件。
 - 停止、换源、重载和关闭应用时释放播放器、临时文件和后台任务。
@@ -112,7 +112,9 @@ python -m venv .venv
 
 ## 8. 配置、依赖与代码风格
 
-- 路径基于工程根目录或 `config.basepath` 构造，不写死本机绝对路径。
+- 路径基于工程根目录或 `config.basepath` 构造，不写死本机绝对路径；ffmpeg 等外部工具路径写入 `conf/setup.ini` 的 `[tools] ffmpeg_dir`，由 `audio_io.configure_ffmpeg()` 注入 pydub（不改系统环境变量）。
+- 音效调试页所有数值输入框统一使用 `audio_widgets.SelectAllDoubleSpinBox`：聚焦/点击全选文本、关闭键盘跟踪，输入回车或失焦才提交，禁止换回裸 `QDoubleSpinBox`（点击中部输入 `0` 会落入小数位被吞）。
+- EQ 增益范围为 ±15 dB（粉噪等带斜坡的测试信号需要更大摆幅）；频段、Q 值的规范见 `filters/EQFilters.py`。
 - 应用配置使用 `conf/setup.ini`，算法配置使用独立 JSON；界面临时参数最终写入算法链，不另建不一致的状态副本。
 - 界面和错误信息使用中文，主流程使用 logger，不使用 `print` 代替日志。
 - 界面主题统一由 `theme.py` 管理（无 Qt 依赖）：`dark`/`light` 两套色板，`set_theme()` 为唯一切换接口，`color("token")` 供代码取色，`render_qss()` 把 `resource/qss/app.qss` 模板中的占位符渲染成最终样式；QSS 模板内禁止写死颜色。启动时由 `conf/setup.ini` 的 `[ui] theme` 决定主题，默认 `dark`；界面上通过 Header 右侧"设置 → 主题切换"入口切换，选择后立即刷新 QSS 并写回配置，已创建的 pyqtgraph 图表重启后生效。

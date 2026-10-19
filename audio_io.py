@@ -139,6 +139,37 @@ def load_audio(path, pcm_format=None):
         raise AudioError("音频解码失败，请检查格式或 ffmpeg 配置：{}".format(exc)) from exc
 
 
+def configure_ffmpeg(ffmpeg_dir):
+    """指定 pydub 使用的 ffmpeg/ffprobe 绝对路径，不修改系统环境变量。
+
+    ffmpeg_dir 指向 ffmpeg 安装目录或其下的 bin 目录
+    （需包含 ffmpeg.exe 与 ffprobe.exe）。配置成功返回 True。
+    """
+    import os
+
+    from pydub import AudioSegment
+    from pydub import utils as _pydub_utils
+
+    candidates = (ffmpeg_dir, os.path.join(ffmpeg_dir, "bin"))
+
+    def _find(names):
+        for folder in candidates:
+            for name in names:
+                path = os.path.join(folder, name)
+                if os.path.isfile(path):
+                    return path
+        return None
+
+    ffmpeg = _find(("ffmpeg.exe", "ffmpeg"))
+    ffprobe = _find(("ffprobe.exe", "ffprobe"))
+    if not ffmpeg or not ffprobe:
+        return False
+    AudioSegment.converter = ffmpeg
+    AudioSegment.decoder = ffmpeg
+    _pydub_utils.get_prober_name = lambda: ffprobe
+    return True
+
+
 def save_wav(path, sample_rate, data):
     if int(sample_rate) <= 0:
         raise AudioError("保存音频时采样率必须大于 0。")

@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QDesktopWidget, QDockWidget, QFrame, QMainWindow
 import config as settings
 import theme
 from appEvent import AppEvent
+from audio_io import configure_ffmpeg
 from center import Center
 from config import Config
 from deviceWidget import DeviceConnWidget
@@ -128,6 +129,14 @@ if __name__ == "__main__":
     except ValueError as exc:
         logger.warning("%s，回退到默认主题 dark", exc)
         theme.set_theme("dark")
+    ffmpeg_dir = config.read_key("tools", "ffmpeg_dir", "", str)
+    if ffmpeg_dir:
+        if configure_ffmpeg(ffmpeg_dir):
+            logger.info("ffmpeg 已配置：%s", ffmpeg_dir)
+        else:
+            logger.warning(
+                "ffmpeg 目录无效：%s（MP3/AAC 等非 WAV/PCM 文件将无法解码）", ffmpeg_dir
+            )
     app.processEvents()
     settings.app_event = AppEvent(config, logger)
     viewer = AudioTuningApp(config=config, logger=logger)

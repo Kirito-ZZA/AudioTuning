@@ -19,6 +19,7 @@ class DeviceWidget(QFrame):
             ("reset", "参数重置"),
             ("save_config", "保存算法配置"),
             ("reload_config", "重载算法配置"),
+            ("fit_target", "目标曲线拟合"),
         ):
             button = QPushButton(text, self)
             button.setCursor(Qt.PointingHandCursor)
@@ -50,6 +51,7 @@ class DeviceWidget(QFrame):
         self.audio_control_buttons["play_original"].setEnabled(loaded)
         self.audio_control_buttons["play_processed"].setEnabled(processed_ready)
         self.audio_control_buttons["stop"].setEnabled(player_state != "stopped")
+        self.audio_control_buttons["fit_target"].setEnabled(loaded)
         for action, label in (
             ("play_original", "original"), ("play_processed", "processed")
         ):
